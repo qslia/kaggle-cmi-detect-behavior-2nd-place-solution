@@ -696,7 +696,7 @@ class GestureDataModule(L.LightningDataModule):
 
 @dataclass
 class CFG:
-    csv_path: str = "../../input/train.csv"
+    csv_path: str = "cmi-detect-behavior-with-sensor-data/train.csv"
     cache_dir: str = "./cache"  # cache directory
     project: str = "CMI2025"
     exp_name: str = "imu_102_10"
@@ -739,7 +739,7 @@ class CFG:
 def prepare_dataframe(csv_path: str) -> pl.DataFrame:
 
     df = pl.read_csv(csv_path)
-    df_demo = pl.read_csv("../../input/train_demographics.csv")
+    df_demo = pl.read_csv("cmi-detect-behavior-with-sensor-data/train_demographics.csv")
     df = df.join(df_demo, on="subject", how="left")
     
     # Select base columns (raw columns before feature engineering)
@@ -761,17 +761,17 @@ def prepare_dataframe(csv_path: str) -> pl.DataFrame:
     df = df.select(keep_cols)
     import concurrent.futures
 
-    def fill_tof_col(col_name: str, df: pl.DataFrame) -> pl.Series:
-        filled = pl.when((pl.col(col_name).is_null()) | (pl.col(col_name) == -1)) \
-                   .then(0) \
-                   .otherwise(pl.col(col_name)) \
-                   .alias(col_name)
-        return filled
+    def fill_tof_col(col_name: str) -> pl.Expr:
+        return (
+            pl.when(pl.col(col_name).is_null() | (pl.col(col_name) == -1))
+            .then(0)
+            .otherwise(pl.col(col_name))
+            .alias(col_name)
+        )
 
-    # Fill each tof_col in parallel
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        filled_exprs = list(executor.map(lambda c: fill_tof_col(c, df), tof_cols))
+    filled_exprs = [fill_tof_col(c) for c in tof_cols]
     df = df.with_columns(filled_exprs)
+
     
     return df
 
