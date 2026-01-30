@@ -1,0 +1,2 @@
+
+`pd.api.types.is_numeric_dtype(df[col])` is a pandas utility function that returns `True` if the data type of the specified column is any numeric type (such as integers or floats) and `False` otherwise.
