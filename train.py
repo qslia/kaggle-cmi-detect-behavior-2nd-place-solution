@@ -759,20 +759,13 @@ def prepare_dataframe(csv_path: str) -> pl.DataFrame:
     tof_cols = [f"tof_{i}_v{j}" for i in range(1,6) for j in range(64)]
     keep_cols.extend(tof_cols)
     df = df.select(keep_cols)
-    import concurrent.futures
 
-    def fill_tof_col(col_name: str) -> pl.Expr:
-        return (
-            pl.when(pl.col(col_name).is_null() | (pl.col(col_name) == -1))
-            .then(0)
-            .otherwise(pl.col(col_name))
-            .alias(col_name)
-        )
+    df = df.with_columns(
+        pl.col(tof_cols)
+        .fill_null(0)
+        .replace(-1, 0)
+    )
 
-    filled_exprs = [fill_tof_col(c) for c in tof_cols]
-    df = df.with_columns(filled_exprs)
-
-    
     return df
 
 
