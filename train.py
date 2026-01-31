@@ -3,7 +3,7 @@ import sys
 import random
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import List, Dict, Tuple, Any, Sequence
+from typing import List, Dict, Tuple, Any, Sequence, Hashable
 
 import numpy as np
 import polars as pl
@@ -787,28 +787,34 @@ def get_phase1_behavior(df: pl.DataFrame, sequence_id: str) -> str:
     # Raise error if phase1 is not found
     raise ValueError(f"Phase1 behavior not found in sequence {sequence_id}")
 
-def make_label_mapping(df: pl.DataFrame) -> Dict[str, int]:
-    orientation_gesture_pairs = (
-        df.filter(pl.col("sequence_counter") == 0)
-        .select(["orientation", "gesture", "behavior"])
-        .unique()
-        .sort(["orientation", "gesture", "behavior"])
+
+def make_label_mapping(df: pl.DataFrame) -> Dict[Tuple[str, str, str], int]:
+    df0 = df.filter(pl.col("sequence_counter") == 0)
+
+    pairs = (
+        df0.select(["orientation", "gesture", "behavior"])
+           .unique()
+           .sort(["orientation", "gesture", "behavior"])
+           .with_row_index("label")   # label = 0..N-1
     )
-    
-    # Assign labels (0..N-1) for (orientation, gesture, phase1_behavior) triplets
-    label2idx = {}
-    for i, (orientation, gesture, phase1_behavior) in enumerate(orientation_gesture_pairs.iter_rows()):
-        label2idx[(orientation, gesture, phase1_behavior)] = i
-    
+
+    label2idx = {
+        (o, g, b): int(lbl)
+        for lbl, o, g, b in pairs.select(["label","orientation","gesture","behavior"]).iter_rows()
+    }
+
     print(f"Created {len(label2idx)} orientation-gesture-phase1behavior combinations")
-    
-    # Debug: print number of gestures per orientation
-    orientations = df.select("orientation").unique().sort("orientation").to_series().to_list()
-    for orientation in orientations:
-        gestures_in_orientation = df.filter(pl.col("orientation") == orientation).select("gesture").unique().to_series().to_list()
-        print(f"Orientation '{orientation}': {len(gestures_in_orientation)} gestures")
-    
+
+    orientations = df0.select("orientation").unique().sort("orientation").to_series().to_list()
+    for o in orientations:
+        n_g = (
+            df0.filter(pl.col("orientation") == o)
+               .select("gesture").unique().height
+        )
+        print(f"Orientation '{o}': {n_g} gestures")
+
     return label2idx
+
 
 
 def create_gesture_mapping_for_evaluation(df: pl.DataFrame, label2idx: Dict[Tuple[str, str, str], int]) -> Dict[str, Any]:
