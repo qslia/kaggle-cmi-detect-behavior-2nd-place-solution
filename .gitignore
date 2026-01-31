@@ -2,3 +2,4 @@ cmi-detect-behavior-with-sensor-data/
 .qoder
 .idea/
 .vscode/
+__pycache__/
