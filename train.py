@@ -904,23 +904,8 @@ def create_gesture_mapping_for_evaluation(df: pl.DataFrame, label2idx: Dict[Tupl
     }
 
 
-def run_fold(cfg: CFG, fold_idx: int, df: pl.DataFrame, label2idx: Dict[Tuple[str, str, str], int]) -> Dict[str, float]:
-    print("Preparing data splits ...", flush=True)
-    # Get (orientation, gesture) pair per sequence_id
-    seq_df = df.select(["sequence_id", "subject", "orientation",
-                       "gesture", "handedness"]).unique().sort(["sequence_id"])
-    seq_ids = seq_df["sequence_id"].to_list()
-    subjects = seq_df["subject"].to_list()
-
-    # Use handedness as y for stratification
-    y = seq_df["handedness"].to_list()
-
-    # Use StratifiedGroupKFold to balance (orientation, gesture) across folds
-    sgkf = StratifiedGroupKFold(
-        n_splits=cfg.n_folds, shuffle=True, random_state=cfg.seed)
-    splits = list(sgkf.split(seq_ids, y=y, groups=subjects))
+def run_fold(cfg: CFG, fold_idx: int, splits: List[List[int]], label2idx: Dict[Tuple[str, str, str], int]) -> Dict[str, float]:
     train_idx, val_idx = splits[fold_idx]
-
     train_seq_ids = [seq_ids[i] for i in train_idx]
     val_seq_ids = [seq_ids[i] for i in val_idx]
 
@@ -1069,12 +1054,26 @@ def main(cfg: CFG):
     print(
         f"Label mapping prepared. Num orientation-gesture combinations: {len(label2idx)}", flush=True)
 
-    folds_to_run = range(cfg.n_folds) if cfg.fold is None else [cfg.fold]
+    print("Preparing data splits ...", flush=True)
+    # Get (orientation, gesture) pair per sequence_id
+    seq_df = df.select(["sequence_id", "subject", "orientation",
+                       "gesture", "handedness"]).unique().sort(["sequence_id"])
+    seq_ids = seq_df["sequence_id"].to_list()
+    subjects = seq_df["subject"].to_list()
 
+    # Use handedness as y for stratification
+    y = seq_df["handedness"].to_list()
+
+    # Use StratifiedGroupKFold to balance (orientation, gesture) across folds
+    sgkf = StratifiedGroupKFold(
+        n_splits=cfg.n_folds, shuffle=True, random_state=cfg.seed)
+    splits = list(sgkf.split(seq_ids, y=y, groups=subjects))
+
+    folds_to_run = range(cfg.n_folds) if cfg.fold is None else [cfg.fold]
     fold_metrics_list: list[dict[str, float]] = []
     for fold_idx in folds_to_run:
         print(f"\n===== Fold {fold_idx} / {cfg.n_folds} =====")
-        metrics = run_fold(cfg, fold_idx, df, label2idx)
+        metrics = run_fold(cfg, fold_idx, splits, label2idx)
         fold_metrics_list.append(metrics)
 
     # --- Compute and display mean across folds ---
