@@ -904,7 +904,7 @@ def create_gesture_mapping_for_evaluation(df: pl.DataFrame, label2idx: Dict[Tupl
     }
 
 
-def run_fold(cfg: CFG, fold_idx: int, splits: List[List[int]], label2idx: Dict[Tuple[str, str, str], int]) -> Dict[str, float]:
+def run_fold(cfg: CFG, fold_idx: int, splits: List[List[int]], label2idx: Dict[Tuple[str, str, str], int], seq_ids: List[str], df: pl.DataFrame) -> Dict[str, float]:
     train_idx, val_idx = splits[fold_idx]
     train_seq_ids = [seq_ids[i] for i in train_idx]
     val_seq_ids = [seq_ids[i] for i in val_idx]
@@ -1069,11 +1069,12 @@ def main(cfg: CFG):
         n_splits=cfg.n_folds, shuffle=True, random_state=cfg.seed)
     splits = list(sgkf.split(seq_ids, y=y, groups=subjects))
 
+
     folds_to_run = range(cfg.n_folds) if cfg.fold is None else [cfg.fold]
     fold_metrics_list: list[dict[str, float]] = []
     for fold_idx in folds_to_run:
         print(f"\n===== Fold {fold_idx} / {cfg.n_folds} =====")
-        metrics = run_fold(cfg, fold_idx, splits, label2idx)
+        metrics = run_fold(cfg, fold_idx, splits, label2idx, seq_ids, df)
         fold_metrics_list.append(metrics)
 
     # --- Compute and display mean across folds ---
