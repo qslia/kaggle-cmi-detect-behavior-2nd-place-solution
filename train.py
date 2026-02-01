@@ -1,3 +1,4 @@
+from numpy import dtype, ndarray, signedinteger
 from utils import quaternion_to_6d_rotation, remove_gravity_from_acc, calculate_angular_velocity_from_quat
 from model import IMUModel, ALLModel, IMUSimpleModel, ALLSimpleModel, IMUDeepModel, ALLDeepModel, ALL25DModel
 import os
@@ -919,6 +920,7 @@ def run_fold(cfg: CFG, fold_idx: int, splits: List[List[int]], label2idx: Dict[T
                               use_tof_mask_augmentation_prob=cfg.use_tof_mask_augmentation_prob,
                               is_train=True,
                               rot_zero=cfg.rot_zero)
+
     val_ds = GestureDataset(df, val_seq_ids, label2idx, use_tof=use_tof,
                             rot_zero=cfg.rot_zero)  # validation uses hard labels
 
@@ -1067,7 +1069,7 @@ def main(cfg: CFG):
     # Use StratifiedGroupKFold to balance (orientation, gesture) across folds
     sgkf = StratifiedGroupKFold(
         n_splits=cfg.n_folds, shuffle=True, random_state=cfg.seed)
-    splits = list(sgkf.split(seq_ids, y=y, groups=subjects))
+    splits = list[tuple[ndarray[Any, dtype[signedinteger[Any]]], ndarray[Any, dtype[signedinteger[Any]]]]](sgkf.split(seq_ids, y=y, groups=subjects))    
 
 
     folds_to_run = range(cfg.n_folds) if cfg.fold is None else [cfg.fold]
