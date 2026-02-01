@@ -65,7 +65,7 @@ _FEATURE_COLUMNS = FEATURE_NAMES
 _LABEL_NON_TARGET = "Non-Target"
 
 
-def                                                                                  behavior_to_phase(behavior):
+def behavior_to_phase(behavior):
     """Convert behavior string to phase index"""
     if behavior in ['Moves hand to target location', 'Relaxes and moves hand to target location']:
         return 0  # phase1
@@ -174,7 +174,7 @@ def process_sequence(sid, df, label2idx):
     tof = grp.select(tof_cols).to_numpy()
 
     # Extract and convert phase information
-    behaviors = grp.select("behavior").to_numpy()
+    behaviors = grp.select("behavior").to_numpy().flatten()
     phases = np.array([behavior_to_phase(b) for b in behaviors])
 
     # Determine label as a class index of (orientation, gesture, phase1_behavior)
